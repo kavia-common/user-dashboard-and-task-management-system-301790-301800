@@ -7,12 +7,33 @@ const swaggerSpec = require('../swagger');
 // Initialize express app
 const app = express();
 
-// Configure CORS
-const corsOrigin = process.env.CORS_ORIGIN || '*';
+// Configure CORS with exact origin matching
+const corsOrigin = process.env.CORS_ORIGIN || 'https://vscode-internal-21738-beta.beta01.cloud.kavia.ai:3000';
+
 app.use(cors({
-  origin: corsOrigin,
+  origin: function(origin, callback) {
+    // Allow requests with no origin (like mobile apps, curl, Postman)
+    if (!origin) {
+      return callback(null, true);
+    }
+    
+    // Exact match - no trailing slash
+    if (origin === corsOrigin) {
+      return callback(null, true);
+    }
+    
+    // Also allow localhost for development
+    if (origin === 'http://localhost:3000' || origin === 'http://localhost:3001') {
+      return callback(null, true);
+    }
+    
+    callback(new Error('Not allowed by CORS'));
+  },
+  credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposedHeaders: ['Content-Range', 'X-Content-Range'],
+  maxAge: 3600
 }));
 
 app.set('trust proxy', true);

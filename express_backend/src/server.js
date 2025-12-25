@@ -19,8 +19,10 @@ const server = app.listen(PORT, HOST, () => {
   console.log(`✅ Server running at http://${HOST}:${PORT}`);
   console.log(`📚 API Documentation available at http://${HOST}:${PORT}/docs`);
   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
-  const corsOrigin = process.env.CORS_ORIGIN || '*';
-  console.log(`CORS Origin: ${corsOrigin}`);
+  const corsOrigin = process.env.CORS_ORIGIN || 'https://vscode-internal-21738-beta.beta01.cloud.kavia.ai:3000';
+  console.log(`CORS Origin (exact match): ${corsOrigin}`);
+  console.log('CORS Methods: GET, POST, PUT, DELETE, PATCH, OPTIONS');
+  console.log('CORS Headers: Content-Type, Authorization, X-Requested-With');
   console.log('✅ JWT_SECRET is configured');
   
   // Connect to MongoDB (non-blocking, server already listening)
