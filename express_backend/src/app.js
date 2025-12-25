@@ -4,78 +4,79 @@ const routes = require('./routes');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('../swagger');
 
-// Initialize express app
 const app = express();
 
-// Configure CORS with exact origin matching
-const corsOrigin = process.env.CORS_ORIGIN || 'https://vscode-internal-21738-beta.beta01.cloud.kavia.ai:3000';
+/* ============================
+   CORS CONFIG (FIXED)
+   ============================ */
+
+// normalize origin (remove trailing slash)
+const normalizeOrigin = (origin) =>
+  origin ? origin.replace(/\/$/, '') : origin;
+
+const ALLOWED_ORIGINS = [
+  'https://vscode-internal-21738-beta.beta01.cloud.kavia.ai:3000',
+  'http://localhost:3000'
+];
 
 app.use(cors({
-  origin: function(origin, callback) {
-    // Allow requests with no origin (like mobile apps, curl, Postman)
-    if (!origin) {
+  origin: (origin, callback) => {
+    // allow Postman, curl, Swagger
+    if (!origin) return callback(null, true);
+
+    const cleanOrigin = normalizeOrigin(origin);
+
+    if (ALLOWED_ORIGINS.includes(cleanOrigin)) {
       return callback(null, true);
     }
-    
-    // Exact match - no trailing slash
-    if (origin === corsOrigin) {
-      return callback(null, true);
-    }
-    
-    // Also allow localhost for development
-    if (origin === 'http://localhost:3000' || origin === 'http://localhost:3001') {
-      return callback(null, true);
-    }
-    
-    callback(new Error('Not allowed by CORS'));
+
+    return callback(null, false);
   },
-  credentials: true,
+  credentials: false,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-  exposedHeaders: ['Content-Range', 'X-Content-Range'],
-  maxAge: 3600
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  optionsSuccessStatus: 204
 }));
+
+/* IMPORTANT: allow preflight to pass */
+app.options('*', cors());
 
 app.set('trust proxy', true);
 
-// Swagger documentation
+/* ============================
+   SWAGGER
+   ============================ */
+
 app.use('/docs', swaggerUi.serve, (req, res, next) => {
   const host = req.get('host');
-  let protocol = req.protocol;
-
-  const actualPort = req.socket.localPort;
-  const hasPort = host.includes(':');
-  
-  const needsPort =
-    !hasPort &&
-    ((protocol === 'http' && actualPort !== 80) ||
-     (protocol === 'https' && actualPort !== 443));
-  const fullHost = needsPort ? `${host}:${actualPort}` : host;
-  protocol = req.secure ? 'https' : protocol;
+  const protocol = req.secure ? 'https' : 'http';
 
   const dynamicSpec = {
     ...swaggerSpec,
     servers: [
-      {
-        url: `${protocol}://${fullHost}`,
-      },
-    ],
+      { url: `${protocol}://${host}` }
+    ]
   };
+
   swaggerUi.setup(dynamicSpec)(req, res, next);
 });
 
-// Parse JSON request body
-app.use(express.json());
+/* ============================
+   MIDDLEWARE & ROUTES
+   ============================ */
 
-// Mount routes
+app.use(express.json());
 app.use('/', routes);
 
-// Error handling middleware
+/* ============================
+   ERROR HANDLER
+   ============================ */
+
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({
     status: 'error',
-    message: 'Internal Server Error',
+    message: 'Internal Server Error'
   });
 });
 
