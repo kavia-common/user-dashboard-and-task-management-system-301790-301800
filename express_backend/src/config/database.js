@@ -2,6 +2,35 @@ const mongoose = require('mongoose');
 
 // PUBLIC_INTERFACE
 /**
+ * Check if MongoDB is connected and ready
+ * @returns {boolean} True if connected (readyState === 1)
+ */
+const isConnected = () => {
+  return mongoose.connection.readyState === 1;
+};
+
+// PUBLIC_INTERFACE
+/**
+ * Get current connection state with description
+ * @returns {Object} Connection state info
+ */
+const getConnectionState = () => {
+  const states = {
+    0: 'disconnected',
+    1: 'connected',
+    2: 'connecting',
+    3: 'disconnecting'
+  };
+  return {
+    readyState: mongoose.connection.readyState,
+    state: states[mongoose.connection.readyState] || 'unknown',
+    host: mongoose.connection.host || 'N/A',
+    database: mongoose.connection.name || 'N/A'
+  };
+};
+
+// PUBLIC_INTERFACE
+/**
  * Establishes connection to MongoDB database
  * Uses Atlas URI with DNS SRV resolution and handles connection errors gracefully
  * @returns {Promise<mongoose.Connection>} MongoDB connection instance
@@ -37,22 +66,40 @@ const connectDB = async () => {
     return conn;
   } catch (error) {
     console.error(`❌ Error connecting to MongoDB: ${error.message}`);
-    console.error('Full error stack:', error.stack);
     
-    if (error.message.includes('IP') || error.message.includes('whitelist')) {
-      console.error('⚠️  MongoDB Atlas Connection Issue:');
-      console.error('   The server IP address may not be whitelisted in MongoDB Atlas.');
-      console.error('   Please add 0.0.0.0/0 to the IP Access List in MongoDB Atlas');
-      console.error('   or add the specific server IP address.');
+    // Detailed error analysis
+    if (error.message.includes('IP') || error.message.includes('whitelist') || error.message.includes('Could not connect to any servers')) {
+      console.error('\n' + '='.repeat(60));
+      console.error('⚠️  MONGODB ATLAS IP WHITELIST ISSUE');
+      console.error('='.repeat(60));
+      console.error('This server\'s IP address is NOT whitelisted in MongoDB Atlas.');
+      console.error('\n📋 ACTION REQUIRED:');
+      console.error('   1. Go to MongoDB Atlas: https://cloud.mongodb.com');
+      console.error('   2. Navigate to: Network Access → IP Access List');
+      console.error('   3. Click "Add IP Address"');
+      console.error('   4. Option A (Development): Add 0.0.0.0/0 to allow all IPs');
+      console.error('   5. Option B (Production): Add this server\'s specific IP');
+      console.error('\n💡 Note: The server will continue running but all database');
+      console.error('   operations will return 503 Service Unavailable.');
+      console.error('='.repeat(60) + '\n');
     }
     
-    if (error.message.includes('authentication')) {
-      console.error('⚠️  MongoDB Authentication Issue:');
-      console.error('   Please verify the username and password in MONGO_URI are correct.');
+    if (error.message.includes('authentication') || error.message.includes('auth failed')) {
+      console.error('\n⚠️  MongoDB Authentication Issue:');
+      console.error('   Username or password in MONGO_URI is incorrect.');
+      console.error('   Please verify credentials in MongoDB Atlas.\n');
     }
     
-    console.error('   Server will continue without database connection.');
-    console.error('   API endpoints requiring database will fail until connection is established.');
+    if (error.message.includes('ENOTFOUND') || error.message.includes('querySrv')) {
+      console.error('\n⚠️  DNS Resolution Error:');
+      console.error('   Cannot resolve MongoDB Atlas hostname.');
+      console.error('   Check internet connection and MONGO_URI format.\n');
+    }
+    
+    // Log connection attempt details
+    console.error('Connection attempt to:', mongoURI.substring(0, 30) + '...');
+    console.error('Server will continue without database connection.');
+    console.error('API endpoints requiring database will return 503 errors.\n');
     
     // Don't exit in development to allow server to run for testing
     if (process.env.NODE_ENV === 'production') {
@@ -65,3 +112,5 @@ const connectDB = async () => {
 };
 
 module.exports = connectDB;
+module.exports.isConnected = isConnected;
+module.exports.getConnectionState = getConnectionState;

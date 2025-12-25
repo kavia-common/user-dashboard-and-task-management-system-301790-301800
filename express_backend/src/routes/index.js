@@ -3,6 +3,7 @@ const healthController = require('../controllers/health');
 const authRoutes = require('./auth');
 const profileRoutes = require('./profile');
 const tasksRoutes = require('./tasks');
+const dbStatusRoutes = require('./dbstatus');
 
 const router = express.Router();
 
@@ -40,5 +41,6 @@ router.get('/', healthController.check.bind(healthController));
 router.use('/auth', authRoutes);
 router.use('/profile', profileRoutes);
 router.use('/tasks', tasksRoutes);
+router.use('/dbstatus', dbStatusRoutes);
 
 module.exports = router;
