@@ -23,9 +23,21 @@ const connectDB = async () => {
 
     console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
     console.log(`Database: ${conn.connection.name}`);
+    console.log(`Ready state: ${conn.connection.readyState}`);
+    
+    // Set up connection event listeners for better monitoring
+    mongoose.connection.on('error', (err) => {
+      console.error('MongoDB connection error:', err);
+    });
+    
+    mongoose.connection.on('disconnected', () => {
+      console.warn('MongoDB disconnected');
+    });
+    
     return conn;
   } catch (error) {
     console.error(`❌ Error connecting to MongoDB: ${error.message}`);
+    console.error('Full error stack:', error.stack);
     
     if (error.message.includes('IP') || error.message.includes('whitelist')) {
       console.error('⚠️  MongoDB Atlas Connection Issue:');
@@ -47,7 +59,8 @@ const connectDB = async () => {
       process.exit(1);
     }
     
-    return null;
+    // Throw the error so the promise chain in server.js can handle it properly
+    throw error;
   }
 };
 
