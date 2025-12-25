@@ -5,12 +5,18 @@ const connectDB = require('./config/database');
 const PORT = process.env.PORT || 3001;
 const HOST = process.env.HOST || '0.0.0.0';
 
-// Connect to MongoDB
-connectDB();
+// Connect to MongoDB (non-blocking in development)
+connectDB().then(() => {
+  console.log('Database initialization complete');
+}).catch((err) => {
+  console.error('Database connection failed, but server will continue:', err.message);
+});
 
 const server = app.listen(PORT, HOST, () => {
-  console.log(`Server running at http://${HOST}:${PORT}`);
-  console.log(`API Documentation available at http://${HOST}:${PORT}/docs`);
+  console.log(`✅ Server running at http://${HOST}:${PORT}`);
+  console.log(`📚 API Documentation available at http://${HOST}:${PORT}/docs`);
+  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`CORS Origin: ${process.env.CORS_ORIGIN || '*'}`);
 });
 
 // Graceful shutdown
