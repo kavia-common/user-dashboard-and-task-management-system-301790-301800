@@ -7,15 +7,20 @@ const swaggerSpec = require('../swagger');
 // Initialize express app
 const app = express();
 
+// Configure CORS
+const corsOrigin = process.env.CORS_ORIGIN || '*';
 app.use(cors({
-  origin: '*',
+  origin: corsOrigin,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
 app.set('trust proxy', true);
+
+// Swagger documentation
 app.use('/docs', swaggerUi.serve, (req, res, next) => {
-  const host = req.get('host');           // may or may not include port
-  let protocol = req.protocol;          // http or https
+  const host = req.get('host');
+  let protocol = req.protocol;
 
   const actualPort = req.socket.localPort;
   const hasPort = host.includes(':');
